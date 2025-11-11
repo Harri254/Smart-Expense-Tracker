@@ -17,7 +17,7 @@ class AuthController extends Controller
         // 1) validate input
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
         ]);
 
@@ -52,17 +52,17 @@ public function login(Request $request)
         'password' => 'required|string',
     ]);
 
-    // Find user by email
-    $user = User::where('email', $validated['email'])->first();
-
-    // Check if user exists and password matches
-    if (!$user || !Hash::check($validated['password'], $user->password)) {
+    // **CHANGE:** Use the standard Auth::attempt() for credential check
+    if (!Auth::attempt($validated)) {
         throw ValidationException::withMessages([
             'email' => ['The provided credentials are incorrect.'],
         ]);
     }
+    
+    // User is now authenticated, retrieve the user object
+    $user = $request->user();
 
-    // Revoke old tokens
+    // Revoke old tokens (Good security practice!)
     $user->tokens()->delete();
 
     // Create a new token
@@ -72,9 +72,10 @@ public function login(Request $request)
     return response()->json([
         'message' => 'Login successful',
         'user' => $user,
-        'token' => $token,
-    ]);
-} 
+        'token' => $token, // ⬅️ CRUCIAL: Returning the token
+        'token_type' => 'Bearer' // Best practice to include
+    ], 200);
+}
     // ****User profile check
 
     public function me(Request $request)
@@ -83,40 +84,47 @@ public function login(Request $request)
 }
 
     // ****Update profile
-    public function updateProfile(Request $request)
-{
-    $user = $request->user(); // Get logged-in user
+public function updateProfile(Request $request)
+    {
+        $user = $request->user(); // Get the currently logged-in user
 
-    // Validate only the fields sent
-    $validated = $request->validate([
-        'name' => 'sometimes|string|max:255',
-        'email' => 'sometimes|email|unique:users,email,' . $user->id,
-        'password' => 'sometimes|string|min:6|confirmed',
-    ]);
+        // 1. Validation: Use 'sometimes' for optional updates
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            // Check for email uniqueness, ignoring the current user's email
+            'email' => [
+                'sometimes',
+                'required',
+                'email',
+                Rule::unique('users')->ignore($user->id),
+            ],
+            // Password update requires both new password and confirmation
+            'password' => 'sometimes|nullable|string|min:6|confirmed',
+        ]);
 
-    // If password provided, hash it
-    if (isset($validated['password'])) {
-        $validated['password'] = Hash::make($validated['password']);
+        // 2. Handle Password Update (if present)
+        if (isset($validated['password'])) {
+            // Hash the new password before storing
+            $validated['password'] = Hash::make($validated['password']);
+        }
+        
+        // 3. Update only the fields that were passed and validated
+        $user->update($validated);
+
+        // 4. Return the updated user object
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $user,
+        ], 200);
     }
-
-    // Update only provided fields
-    $user->update($validated);
-
-    return response()->json([
-        'message' => 'Profile updated successfully.',
-        'user' => $user,
-    ]);
-}
-
     // ****Logout 
-    public function logout(Request $request)
+public function logout(Request $request)
 {
-    // Delete the current access token
-    $request->user()->currentAccessToken()->delete();
+    $request->user()->currentAccessToken()->delete(); 
 
     return response()->json([
-        'message' => 'Logged out successfully.'
-    ]);
+        'message' => 'Successfully logged out and token revoked.'
+    ], 200);
 }
 
 }

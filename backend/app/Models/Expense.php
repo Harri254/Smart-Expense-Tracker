@@ -10,15 +10,21 @@ class Expense extends Model
     use HasFactory;
 
     protected $fillable = [
-        'amount',
-        'category_id',
+        'user_id',
+        'category_id',  // ⬅️ MUST be included
+        'amount',       // ⬅️ Included exactly once
         'date',
-        'note',
+        'description',  // ⬅️ Assuming your database column is now 'description'
     ];
 
     protected $casts = [
         'date' => 'date',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function category()
     {

@@ -9,7 +9,7 @@ import Home from '../pages/Home'
 import Register from '../pages/Register'
 import Login from '../pages/Login'
 import Dashboard from '../pages/Dashboard'
-import AddTransaction from '../pages/AddTransaction'
+import AddTransaction from '../pages/AddExpense'
 import Analytics from '../pages/Analytics'
 import Settings from '../pages/Settings'
 

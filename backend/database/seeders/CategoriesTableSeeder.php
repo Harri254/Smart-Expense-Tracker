@@ -3,21 +3,25 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Category;
+use Illuminate\Support\Facades\DB;
 
 class CategoriesTableSeeder extends Seeder
 {
     public function run(): void
     {
-        Category::truncate();
+        // Disable foreign key checks (so truncation won't fail)
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('categories')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $categories = [
-            'Groceries', 'Transport', 'Entertainment', 'Utilities', 'Health', 
-            'Education', 'Dining', 'Travel', 'Shopping', 'Savings'
+            ['category_name' => 'Food'],
+            ['category_name' => 'Transport'],
+            ['category_name' => 'Bills'],
+            ['category_name' => 'Entertainment'],
+            ['category_name' => 'Health'],
         ];
 
-        foreach ($categories as $cat) {
-            Category::create(['category_name' => $cat]);
-        }
+        DB::table('categories')->insert($categories);
     }
 }
